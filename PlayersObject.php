@@ -17,134 +17,90 @@
 
 */
 
-
-interface IReadWritePlayers {
-    function readPlayers($source, $filename = null);
-    function writePlayer($source, $player, $filename = null);
-    function display($isCLI, $course, $filename = null);
+/*
+ *  A Player Class
+ *  Holds information about that single player
+ *  Construct and Get/Setter functions
+ */
+class Player{
+    private $name;
+    private $age;
+    private $job;
+    private $salary;
+    
+    public function _construct($nme, $ag, $jb, $sal){
+        $this->name = $nme;
+        $this->age = $ag;
+        $this->job = $jb;
+        $this->salary = $sal;
+    }
+    
+    public function __get($var){
+        return $this->$var;
+    }
+    
+    public function __set($var, $val){
+        $this->$var = $val;
+    }
 }
 
-class PlayersObject implements IReadWritePlayers {
+//Interface used by the Player reader and writers
+interface IReadWritePlayers {
+    function readPlayers($filename = null);
+    function getPlayerData($filename = null);
+    function writePlayer($player, $filename = null);
+    function display($isCLI, $filename = null);
+}
 
-    private $playersArray;
+//Player Object Reader/Writer for Arrays - used for only implementing array type data
+class PlayersObjectArray implements IReadWritePlayers {
 
-    private $playerJsonString;
+    private $playersArray; //Used to keep track of players 
 
     public function __construct() {
-        //We're only using this if we're storing players as an array.
-        $this->playersArray = [];
-
-        //We'll only use this one if we're storing players as a JSON string
-        $this->playerJsonString = null;
+        $this->playersArray = []; //Initialize player array
     }
-
-    /**
-     * @param $source string Where we're retrieving the data from. 'json', 'array' or 'file'
+    
+    /*
      * @param $filename string Only used if we're reading players in 'file' mode.
-     * @return string json
+     * @return player Data Array
      */
-    function readPlayers($source, $filename = null) {
-        $playerData = null;
-
-        switch ($source) {
-            case 'array':
-                $playerData = $this->getPlayerDataArray();
-                break;
-            case 'json':
-                $playerData = $this->getPlayerDataJson();
-                break;
-            case 'file':
-                $playerData = $this->getPlayerDataFromFile($filename);
-                break;
-        }
-
-        if (is_string($playerData)) {
-            $playerData = json_decode($playerData);
-        }
-
-        return $playerData;
-
+    function readPlayers() { 
+                
+        $this->playersArray = $this->getPlayerData(); //Call function to retrieve player data
+        return $this->playersArray;
     }
-
-    /**
-     * @param $source string Where to write the data. 'json', 'array' or 'file'
-     * @param $filename string Only used if we're writing in 'file' mode
-     * @param $player \stdClass Class implementation of the player with name, age, job, salary.
+    
+    /*
+     * Assuming that statically writing our player information in this way is acceptable
+     * Uses player object to create a player then pushes that player into array
+     * Result should be an array that for every index points to a player object
      */
-    function writePlayer($source, $player, $filename = null) {
-        switch ($source) {
-            case 'array':
-                $this->playersArray[] = $player;
-                break;
-            case 'json':
-                $players = [];
-                if ($this->playerJsonString) {
-                    $players = json_decode($this->playerJsonString);
-                }
-                $players[] = $player;
-                $this->playerJsonString = json_encode($player);
-                break;
-            case 'file':
-                $players = json_decode($this->getPlayerDataFromFile($filename));
-                if (!$players) {
-                    $players = [];
-                }
-                $players[] = $player;
-                file_put_contents($filename, json_encode($players));
-                break;
-        }
-    }
+    function getPlayerData() {
 
-
-    function getPlayerDataArray() {
+        $jonas = new Player('Jonas Valenciunas', 26, 'Center', '4.66m');
+        $kyle = new Player('Kyle Lowry', 32, 'Point Guard', '28.7m');
+        $demar = new Player('Demar DeRozan', 28, 'Shooting Guard', '26.54m');
+        $jakob = new Player('Jakob Poeltl', 22, 'Center', '2.704m');
 
         $players = [];
-
-        $jonas = new \stdClass();
-        $jonas->name = 'Jonas Valenciunas';
-        $jonas->age = 26;
-        $jonas->job = 'Center';
-        $jonas->salary = '4.66m';
-        $players[] = $jonas;
-
-        $kyle = new \stdClass();
-        $kyle->name = 'Kyle Lowry';
-        $kyle->age = 32;
-        $kyle->job = 'Point Guard';
-        $kyle->salary = '28.7m';
-        $players[] = $kyle;
-
-        $demar = new \stdClass();
-        $demar->name = 'Demar DeRozan';
-        $demar->age = 28;
-        $demar->job = 'Shooting Guard';
-        $demar->salary = '26.54m';
-        $players[] = $demar;
-
-        $jakob = new \stdClass();
-        $jakob->name = 'Jakob Poeltl';
-        $jakob->age = 22;
-        $jakob->job = 'Center';
-        $jakob->salary = '2.704m';
-        $players[] = $jakob;
+        array_push($players, $jonas, $kyle, $demar, $jakob);
 
         return $players;
-
     }
-
-    function getPlayerDataJson() {
-        $json = '[{"name":"Jonas Valenciunas","age":26,"job":"Center","salary":"4.66m"},{"name":"Kyle Lowry","age":32,"job":"Point Guard","salary":"28.7m"},{"name":"Demar DeRozan","age":28,"job":"Shooting Guard","salary":"26.54m"},{"name":"Jakob Poeltl","age":22,"job":"Center","salary":"2.704m"}]';
-        return $json;
+    
+    /*
+     * @param $filename string Only used if we're writing in 'file' mode
+     * @param $player Class implementation of the player with name, age, job, salary.
+     */
+    function writePlayer($player) {
+      
+        array_push($this->playersArray, $player);
     }
+    
+    function display($isCLI) {
 
-    function getPlayerDataFromFile($filename) {
-        $file = file_get_contents($filename);
-        return $file;
-    }
-
-    function display($isCLI, $source, $filename = null) {
-
-        $players = $this->readPlayers($source, $filename);
+        $players = $this->readPlayers();
 
         if ($isCLI) {
             echo "Current Players: \n";
@@ -191,11 +147,186 @@ class PlayersObject implements IReadWritePlayers {
             <?php
         }
     }
-
 }
 
-$playersObject = new PlayersObject();
+//Player Object Array used for only implementing Json string type data
+class PlayersObjectJson implements IReadWritePlayers {
 
-$playersObject->display(php_sapi_name() === 'cli', 'array');
+    private $playerJson;
+
+    public function __construct() {
+        $this->playerJson = null;
+    }
+    
+    /*
+     * @param $filename string Only used if we're reading players in 'file' mode.
+     * @return player as json string
+     */
+    function readPlayers() { 
+        $this->playerJson = json_encode($this->getPlayerData());
+        return $this->playerJson;
+    }
+    
+    /*
+     * Assuming that statically writing our json string in this way is acceptable
+     */
+    function getPlayerData() {
+        $json = '[{"name":"Jonas Valenciunas","age":26,"job":"Center","salary":"4.66m"},{"name":"Kyle Lowry","age":32,"job":"Point Guard","salary":"28.7m"},{"name":"Demar DeRozan","age":28,"job":"Shooting Guard","salary":"26.54m"},{"name":"Jakob Poeltl","age":22,"job":"Center","salary":"2.704m"}]';
+        return $json;
+    }
+    
+    /*
+     * @param $filename string Only used if we're writing in 'file' mode
+     * @param $player given as Player Object -assumed it's given as player in this case
+     */
+    function writePlayer($player) {
+        $tempArray = json_decode($this->playerJson);
+        array_push($tempArray, $player);
+        $this->playerJson = json_encode($tempArray);
+    }
+    
+    function display($isCLI) {
+
+        $players = $this->readPlayers();
+
+        if ($isCLI) {
+            echo "Current Players: \n";
+            foreach ($players as $player) {
+
+                echo "\tName: $player->name\n";
+                echo "\tAge: $player->age\n";
+                echo "\tSalary: $player->salary\n";
+                echo "\tJob: $player->job\n\n";
+            }
+        } else {
+
+            ?>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    li {
+                        list-style-type: none;
+                        margin-bottom: 1em;
+                    }
+                    span {
+                        display: block;
+                    }
+                </style>
+            </head>
+            <body>
+            <div>
+                <span class="title">Current Players</span>
+                <ul>
+                    <?php foreach($players as $player) { ?>
+                        <li>
+                            <div>
+                                <span class="player-name">Name: <?= $player->name ?></span>
+                                <span class="player-age">Age: <?= $player->age ?></span>
+                                <span class="player-salary">Salary: <?= $player->salary ?></span>
+                                <span class="player-job">Job: <?= $player->job ?></span>
+                            </div>
+                        </li>
+                    <?php } ?>
+                </ul>
+            </body>
+            </html>
+            <?php
+        }
+    }
+}
+
+//Player Object Array used for only implementing Json string type data
+class PlayersObjectFile implements IReadWritePlayers {
+
+    private $playerJson;
+
+    public function __construct() {
+        $this->playerJson = null;
+    }
+    
+    /*
+     * @param $filename string Only used if we're reading players in 'file' mode.
+     * @return player data as array
+     */
+    function readPlayers($filename) { 
+        $this->playerJson = $this->getPlayerData($filename);
+        return $this->playerJson;
+    }
+    
+    /*
+     * get player data by using filename
+     */
+    function getPlayerData($filename) {
+        $file = file_get_contents($filename);
+        return $file;
+    }
+    
+    /*
+     * @param $filename string Only used if we're writing in 'file' mode
+     * @param $player Class implementation of the player with name, age, job, salary.
+     *  -again, assumed that $player will be given as a player object
+     */
+    function writePlayer($player, $filename) {
+        $players = json_decode($this->playerJson);
+        array_push($players, $player);
+        $this->playerJson = json_encode($players);
+        file_put_contents($filename, $this->playerJson); //write back to file with new Json string including new player
+    }
+    
+    function display($isCLI, $filename) {
+
+        $players = $this->readPlayers($filename);
+
+        if ($isCLI) {
+            echo "Current Players: \n";
+            foreach ($players as $player) {
+
+                echo "\tName: $player->name\n";
+                echo "\tAge: $player->age\n";
+                echo "\tSalary: $player->salary\n";
+                echo "\tJob: $player->job\n\n";
+            }
+        } else {
+
+            ?>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    li {
+                        list-style-type: none;
+                        margin-bottom: 1em;
+                    }
+                    span {
+                        display: block;
+                    }
+                </style>
+            </head>
+            <body>
+            <div>
+                <span class="title">Current Players</span>
+                <ul>
+                    <?php foreach($players as $player) { ?>
+                        <li>
+                            <div>
+                                <span class="player-name">Name: <?= $player->name ?></span>
+                                <span class="player-age">Age: <?= $player->age ?></span>
+                                <span class="player-salary">Salary: <?= $player->salary ?></span>
+                                <span class="player-job">Job: <?= $player->job ?></span>
+                            </div>
+                        </li>
+                    <?php } ?>
+                </ul>
+            </body>
+            </html>
+            <?php
+        }
+    }
+}
+
+$playersObject = new PlayersObjectArray();
+
+$playersObject->display(php_sapi_name() === 'cli');
 
 ?>
