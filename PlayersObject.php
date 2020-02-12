@@ -236,7 +236,7 @@ class PlayersObjectJson implements IReadWritePlayers {
     }
 }
 
-//Player Object Array used for only implementing Json string type data
+//Player Object Array used for only implementing file type data
 class PlayersObjectFile implements IReadWritePlayers {
 
     private $playerJson;
