@@ -304,9 +304,9 @@ class PlayersObjectFile implements IReadWritePlayers {
         file_put_contents($this->file, $this->playerJson); //write back to file with new Json string including new player
     }
     
-    function display($isCLI, $filename) {
+    function display($isCLI) {
 
-        $players = $this->readPlayers($filename);
+        $players = $this->readPlayers($this->file);
         $players = json_decode($players); //Convert the json string into iterable array
 
         if ($isCLI) {
