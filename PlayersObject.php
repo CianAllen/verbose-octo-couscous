@@ -44,6 +44,27 @@ class Player{
     }
 }
 
+//Controller object responsible for choocisng correct type of reader/writer
+class controller {
+    public $readerWriter;
+    
+    /*
+     * Constructor for the controller
+     * Assumed that the parameters in this case are being passed in using POST
+     * Use those parameters to determine what kind of reader/writer to use
+     * Assumed that in this case, our model is our reader/writer
+     */
+    public function __construct(){
+        if ($_POST['source'] == 'array'){
+            $this->readerWriter = new PlayersObjectArray();
+        } else if ($_POST['source'] == 'json'){
+            $this->readerWriter = new PlayersObjectJson();
+        } else if ($_POST['source'] == 'file'){
+            $this->readerWriter = new PlayersObjectFile();
+        }
+    }
+}
+
 //Interface used by the Player reader and writers
 interface IReadWritePlayers {
     function readPlayers($filename = null);
