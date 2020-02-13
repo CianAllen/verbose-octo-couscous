@@ -1,21 +1,17 @@
 <?php
 
 /*
-    Development Exercise
-
-      The following code is poorly designed and error prone. Refactor the objects below to follow a more SOLID design.
-      Keep in mind the fundamentals of MVVM/MVC and Single-responsibility when refactoring.
-
-      Further, the refactored code should be flexible enough to easily allow the addition of different display
-        methods, as well as additional read and write methods.
-
-      Feel free to add as many additional classes and interfaces as you see fit.
-
-      Note: Please create a fork of the https://github.com/BrandonLegault/exercise repository and commit your changes
-        to your fork. The goal here is not 100% correctness, but instead a glimpse into how you
-        approach refactoring/redesigning bad code. Commit often to your fork.
-
-*/
+ *  Cian Allen Verbose-octo-couscous Development Exercise
+ *  Feb 13th, 2020
+ *  
+ *  Classes implemented:
+ *      -a player object
+ *      -a controller object
+ *      -'IReadWritePlayers' interface used by reader/writer classes
+ *      -Array based reader/writer object
+ *      -Json String based reader/writer object
+ *      -File based reader/writer object 
+ */
 
 /*
  *  A Player Class
@@ -44,15 +40,18 @@ class Player{
     }
 }
 
-//Controller object responsible for choocisng correct type of reader/writer
+//Controller object responsible for choosing correct type of reader/writer
 class controller {
-    public $readerWriter;
+    private $readerWriter;
+    private $type;
     
     /*
      * Constructor for the controller
      * Assumed that the parameters in this case are being passed in using POST
+     *      -source parameter for 'array', 'json' or 'file'
+     *      -file parameter only used when 'file' source
      * Use those parameters to determine what kind of reader/writer to use
-     * Assumed that in this case, our model is our reader/writer
+     * Assumed that our model is our reader/writer
      */
     public function __construct(){
         if ($_POST['source'] == 'array'){
@@ -61,25 +60,28 @@ class controller {
             $this->readerWriter = new PlayersObjectJson();
         } else if ($_POST['source'] == 'file'){
             $this->readerWriter = new PlayersObjectFile();
+            $this->readerWriter->file = $_POST['file']; //Assumed we can access the file name through the post method
         }
     }
 }
 
 //Interface used by the Player reader and writers
 interface IReadWritePlayers {
-    function readPlayers($filename = null);
-    function getPlayerData($filename = null);
-    function writePlayer($player, $filename = null);
-    function display($isCLI, $filename = null);
+    function readPlayers();
+    function getPlayerData();
+    function writePlayer($player);
+    function display($isCLI);
 }
 
 //Player Object Reader/Writer for Arrays - used for only implementing array type data
 class PlayersObjectArray implements IReadWritePlayers {
 
     private $playersArray; //Used to keep track of players 
+    private $type; //Type of data used -will be set to 'array' by controller
 
     public function __construct() {
         $this->playersArray = []; //Initialize player array
+        $this->type = 'array';
     }
     
     /*
@@ -174,9 +176,11 @@ class PlayersObjectArray implements IReadWritePlayers {
 class PlayersObjectJson implements IReadWritePlayers {
 
     private $playerJson;
+    private $type; //Type of data used -will be set to 'json' by controller
 
     public function __construct() {
         $this->playerJson = null;
+        $this->type = 'json';
     }
     
     /*
@@ -184,7 +188,7 @@ class PlayersObjectJson implements IReadWritePlayers {
      * @return player as json string
      */
     function readPlayers() { 
-        $this->playerJson = json_encode($this->getPlayerData());
+        $this->playerJson = json_encode($this->getPlayerData()); //ensures that result is encoded json
         return $this->playerJson;
     }
     
@@ -198,7 +202,7 @@ class PlayersObjectJson implements IReadWritePlayers {
     
     /*
      * @param $filename string Only used if we're writing in 'file' mode
-     * @param $player given as Player Object -assumed it's given as player in this case
+     * @param $player given as Player Object -assumed it's given as player object in this case
      */
     function writePlayer($player) {
         $tempArray = json_decode($this->playerJson);
@@ -209,6 +213,7 @@ class PlayersObjectJson implements IReadWritePlayers {
     function display($isCLI) {
 
         $players = $this->readPlayers();
+        $players = json_decode($players); //Convert the Json string into an iterable array
 
         if ($isCLI) {
             echo "Current Players: \n";
@@ -261,26 +266,30 @@ class PlayersObjectJson implements IReadWritePlayers {
 class PlayersObjectFile implements IReadWritePlayers {
 
     private $playerJson;
+    private $file;
+    private $type; //Type of data used -will be set to 'file' by controller
 
     public function __construct() {
         $this->playerJson = null;
+        $this->file = null; //will be changed by post method in controller
+        $this->type = 'file';
     }
     
     /*
      * @param $filename string Only used if we're reading players in 'file' mode.
-     * @return player data as array
+     * @return player data as json string
      */
-    function readPlayers($filename) { 
-        $this->playerJson = $this->getPlayerData($filename);
+    function readPlayers() { 
+        $this->playerJson = json_encode($this->getPlayerData()); //ensure data is in json format
         return $this->playerJson;
     }
     
     /*
      * get player data by using filename
      */
-    function getPlayerData($filename) {
-        $file = file_get_contents($filename);
-        return $file;
+    function getPlayerData() {
+        $fileResult = file_get_contents($this->file);
+        return $fileResult;
     }
     
     /*
@@ -288,16 +297,17 @@ class PlayersObjectFile implements IReadWritePlayers {
      * @param $player Class implementation of the player with name, age, job, salary.
      *  -again, assumed that $player will be given as a player object
      */
-    function writePlayer($player, $filename) {
+    function writePlayer($player) {
         $players = json_decode($this->playerJson);
         array_push($players, $player);
         $this->playerJson = json_encode($players);
-        file_put_contents($filename, $this->playerJson); //write back to file with new Json string including new player
+        file_put_contents($this->file, $this->playerJson); //write back to file with new Json string including new player
     }
     
     function display($isCLI, $filename) {
 
         $players = $this->readPlayers($filename);
+        $players = json_decode($players); //Convert the json string into iterable array
 
         if ($isCLI) {
             echo "Current Players: \n";
@@ -346,8 +356,20 @@ class PlayersObjectFile implements IReadWritePlayers {
     }
 }
 
-$playersObject = new PlayersObjectArray();
+/*
+ * Assumed that what is wanted is to use a controller to determine 
+ * the type of reader/writer to use here
+ */
+$controllerPlayer = new controller();
 
-$playersObject->display(php_sapi_name() === 'cli');
+$playersObject = &($controllerPlayer->readerWriter);
 
+//Display for an array type or json type reader/writer
+if (($controllerPlayer->type = 'array') || ($controllerPlayer->type = 'json')){
+    $playersObject->display(php_sapi_name() === 'cli');
+} 
+//Display for a file type reader/writer
+else {
+    $playersObject->display(php_sapi_name() === 'cli', $playersObject->file);
+}
 ?>
